@@ -65,24 +65,33 @@ def Simpson(fn, args, N=100):
     :param args: a tuple containing (mean, stDev, lhl, rhl)
     :return: the area beneath the function between lhl and rhl
     """
-    mu, sig, lhl, rhl = args  # unpack arguments
-    m = N+1 if N % 2 == 1 else N  # ensure an even number of intervals
-    h = (rhl-lhl)/(m)
-    fL=fn((lhl,mu,sig))
-    fR=fn((rhl, mu, sig))
-    _Sum = fL + fR
-    odd_sum = 0
-    even_Sum = 0
-    for i in range(1,m):
-        fx=fn((lhl+i*h, mu,sig))  # compute fn(x)
-        if i%2 == 1:
-            odd_sum += fx
-        else:
-            even_Sum += fx
+        if len(args) == 3:  # t-Distribution Case
+        m, lower_limit, upper_limit = args
+    elif len(args) == 4:  # Gaussian Case (Original)
+        mu, sigma, lower_limit, upper_limit = args
+    else:
+        raise ValueError("Invalid number of arguments passed to Simpson function.")
 
-    _Sum += 4*odd_sum+2*even_Sum
-    area = (h/3)*_Sum
-    return area
+    # Ensure even number of intervals
+    if N % 2 == 1:
+        N += 1
+
+    h = (upper_limit - lower_limit) / N  # Step size
+    x_values = [lower_limit + i * h for i in range(N + 1)]  # x values
+
+    # Compute function values at x points
+    if len(args) == 3:  # t-Distribution
+        f_values = [fn((x, m)) for x in x_values]
+    else:  # Gaussian
+        f_values = [fn((x, mu, sigma)) for x in x_values]
+
+    # Simpson's Rule Formula: Integral ≈ h/3 * [f(x0) + 4f(x1) + 2f(x2) + ... + f(xN)]
+    integral = f_values[0] + f_values[-1]  # f(x0) + f(xN)
+    integral += 4 * sum(f_values[i] for i in range(1, N, 2))  # Sum of f(x1), f(x3), ..., f(xN-1) (odd indices)
+    integral += 2 * sum(f_values[i] for i in range(2, N - 1, 2))  # Sum of f(x2), f(x4), ..., f(xN-2) (even indices)
+
+    return (h / 3) * integral
+
 #endregion
 
 #region other numerical methods
