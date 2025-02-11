@@ -1,7 +1,6 @@
 #region imports
-import numpy as np
 from DoolittleMethod import Doolittle
-from matrixOperations import Transpose, MatrixMultiply
+from matrixOperations import Transpose
 #endregion
 
 #region function definitions
@@ -11,7 +10,12 @@ def is_symmetric(A):
     :param A: Square matrix
     :return: True if symmetric, False otherwise
     """
-    return np.allclose(A, Transpose(A))
+    n = len(A)
+    for i in range(n):
+        for j in range(i + 1, n):
+            if A[i][j] != A[j][i]:
+                return False
+    return True
 
 def is_positive_definite(A):
     """
@@ -19,11 +23,75 @@ def is_positive_definite(A):
     :param A: Square matrix
     :return: True if positive definite, False otherwise
     """
-    try:
-        np.linalg.cholesky(A)
-        return True
-    except np.linalg.LinAlgError:
-        return False
+    n = len(A)
+    for i in range(n):
+        # Check if the leading principal minors are positive
+        sub_matrix = [row[:i+1] for row in A[:i+1]]
+        det = determinant(sub_matrix)
+        if det <= 0:
+            return False
+    return True
+
+def determinant(matrix):
+    """
+    Computes the determinant of a square matrix using recursive expansion by minors.
+    :param matrix: Square matrix
+    :return: Determinant of the matrix
+    """
+    n = len(matrix)
+    if n == 1:
+        return matrix[0][0]
+    if n == 2:
+        return matrix[0][0] * matrix[1][1] - matrix[0][1] * matrix[1][0]
+    det = 0
+    for col in range(n):
+        sub_matrix = [row[:col] + row[col+1:] for row in matrix[1:]]
+        det += ((-1) ** col) * matrix[0][col] * determinant(sub_matrix)
+    return det
+
+def cholesky_decomposition(A):
+    """
+    Performs Cholesky decomposition on a symmetric positive definite matrix A.
+    :param A: Symmetric positive definite matrix
+    :return: Lower triangular matrix L such that A = L * L^T
+    """
+    n = len(A)
+    L = [[0.0] * n for _ in range(n)]
+    for i in range(n):
+        for j in range(i + 1):
+            if i == j:
+                sum_k = sum(L[i][k] ** 2 for k in range(j))
+                L[i][j] = (A[i][i] - sum_k) ** 0.5
+            else:
+                sum_k = sum(L[i][k] * L[j][k] for k in range(j))
+                L[i][j] = (A[i][j] - sum_k) / L[j][j]
+    return L
+
+def forward_substitution(L, b):
+    """
+    Solves the system L * y = b using forward substitution.
+    :param L: Lower triangular matrix
+    :param b: Right-hand side vector
+    :return: Solution vector y
+    """
+    n = len(L)
+    y = [0.0] * n
+    for i in range(n):
+        y[i] = (b[i] - sum(L[i][j] * y[j] for j in range(i))) / L[i][i]
+    return y
+
+def backward_substitution(U, y):
+    """
+    Solves the system U * x = y using backward substitution.
+    :param U: Upper triangular matrix
+    :param y: Right-hand side vector
+    :return: Solution vector x
+    """
+    n = len(U)
+    x = [0.0] * n
+    for i in range(n - 1, -1, -1):
+        x[i] = (y[i] - sum(U[i][j] * x[j] for j in range(i + 1, n))) / U[i][i]
+    return x
 
 def cholesky_solve(A, b):
     """
@@ -32,11 +100,10 @@ def cholesky_solve(A, b):
     :param b: Right-hand side vector
     :return: Solution vector x
     """
-    L = np.linalg.cholesky(A)  # Get lower triangular matrix L
-    y = np.linalg.solve(L, b)  # Solve L * y = b
-    x = np.linalg.solve(L.T, y)  # Solve L.T * x = y
+    L = cholesky_decomposition(A)  # Get lower triangular matrix L
+    y = forward_substitution(L, b)  # Solve L * y = b
+    x = backward_substitution(Transpose(L), y)  # Solve L^T * x = y
     return x
-
 
 def main():
     """
@@ -57,7 +124,6 @@ def main():
     for i, problem in enumerate(matrices, 1):
         A = problem["A"]
         b = problem["b"]
-
 
         print(f"\nProblem {i}:")
         print("Matrix A:")
