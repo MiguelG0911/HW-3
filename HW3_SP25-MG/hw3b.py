@@ -33,7 +33,7 @@ def t_cdf(z, df):
 
 def main():
     """
-    Computes probabilities from the t-distribution without using SciPy.
+    Computes probabilities from the t-distribution.
     The user inputs degrees of freedom (df) and a z-value.
     """
     Again = True
